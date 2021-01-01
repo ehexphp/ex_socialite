@@ -6,6 +6,7 @@
  * Time: 4:05 PM
  */
 
+
 class exSocialite extends Controller1 {
     // CLF config
     public static $CLF_BYPASS_TOKEN_LIST = ['processCallback'];
@@ -14,19 +15,19 @@ class exSocialite extends Controller1 {
 
 
     /**
-    *  Redirect Url
-    *  https://your-site-url.com/form/exSocialite::processCallback(facebook)
-    */
+     *  Redirect Url
+     *  https://your-site-url.com/form/exSocialite::processCallback(facebook)
+     */
     // config list
     private static $config = [
         'google' => [
-            'client_id'     => '193765478624-aui8uer6rl9e64gqct3k4paksrre7lr7.apps.googleusercontent.com',
-            'client_secret' => '5oQ12wvTj0uWsFg4-hkU3Hao',
+            'client_id'     => '',
+            'client_secret' => '',
         ],
 
         'facebook' => [
-            'client_id'     => '1272402492917309',
-            'client_secret' => 'f934eb631b6da8eff5e48ca56d9e7566',
+            'client_id'     => '',
+            'client_secret' => '',
         ],
 
         'github' => [
@@ -94,10 +95,12 @@ class exSocialite extends Controller1 {
         return [$name => $config];
     }
 
-
-
+    /**
+     * process user info and save to database
+     * @param $user
+     * @return string|null
+     */
     private static function onUserFound($user){
-        //dd($user);
         //        $user->getId();        // 1472352
         //        $user->getNickname();  // "overtrue"
         //        $user->getUsername();  // "overtrue"
@@ -134,34 +137,30 @@ class exSocialite extends Controller1 {
 
             // login if _user_id exists
             $userInfo = User::find($user->getId(), $user_id_name);
-            //$isAuth =  User::login($userInfo['user_name'],  $userInfo['password'], ['user_name'], ['password'], false);
-            //dd($isAuth, $userInfo['user_name'],  $userInfo['password'],  User::getLogin(false));
-            
-            
-            if($userInfo && strlen($userInfo[$user_id_name]) > 2) {
+            $userInfo = $userInfo? $userInfo: User::find($user->getEmail(), 'email');
+
+
+            if($userInfo) {
                 $result =  User::login(String1::isset_or($userInfo['user_name'], $userInfo['email']), $userInfo->password, ['user_name', 'id', 'email'], ['password'], false);
-                return Url1::redirectIf(routes()->dashboard, '', $result);    // on success redirect
+                if($result)
+                    return Url1::redirectIf(routes()->dashboard, ["Welcome back", "You are welcome", "success"], $result);    // on success redirect
             }
-            
-            
-            
-            
+
 
             // Register
-            $result = User::register($info, ['user_name'], true);
-            //dd('user exists', $result, $info,  $userInfo, $userInstance);
-           
-           
-            if($result) {
-                $isAuth =  User::login($info['user_name'],  $info['password'], ['user_name'], ['password'], true);
-                return Url1::redirectIf(routes()->dashboard, ['Success', 'Account Created'], true);
+            if( !empty($info['user_name']) &&  !empty($info['password']) && !empty($info['email']) && $result = User::register($info, ['user_name', 'email'], true)) {
+                User::login($info['user_name'],  $info['password'], ['user_name'], ['password'], true);
+                return Url1::redirectIf(routes()->dashboard, ['Success', 'Account Created', "success"], true);
             }
         }
 
         // if Failed!
-        Session1::setStatus('Failed to Login', "OAuth Login Operation Failed, Please select another option", 'error');
+        Session1::setStatus('Failed to Login', "OAuth2 Login Operation Failed, Please select another option", 'error');
         return Url1::redirectIf(routes()->dashboard);
     }
+
+
+
 
 
 
@@ -177,7 +176,7 @@ class exSocialite extends Controller1 {
     }
 
 
-    /** 
+    /**
      * OAUTH2 Login. Simply pass either
      *      Facebook    <a href="{{ Form1::callController('exSocialite::processLogin(facebook)') }}">  Login with Facebook</a>
      *      Google      <a href="{{ Form1::callController('exSocialite::processLogin(google)') }}">    Login with Google</a>
@@ -199,4 +198,5 @@ class exSocialite extends Controller1 {
     static function processCallback($name = 'facebook'){
         self::onUserFound(self::getDriver($name)->user());
     }
+
 }
